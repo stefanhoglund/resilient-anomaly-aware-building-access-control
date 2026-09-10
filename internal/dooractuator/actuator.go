@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stefanhoglund/resilient-anomaly-aware-building-access-control/internal/buildsim"
+	"github.com/stefanhoglund/resilient-anomaly-aware-building-access-control/internal/dedupe"
 	"github.com/stefanhoglund/resilient-anomaly-aware-building-access-control/internal/model"
 )
 
@@ -61,7 +62,7 @@ type Actuator struct {
 
 	current buildsim.Equipment
 	ready   bool
-	seen    *seenSet
+	seen    *dedupe.Set
 }
 
 // New builds an Actuator. It fails if DoorID is not in the model mapping.
@@ -90,7 +91,7 @@ func New(cfg Config, bs BuildSim, pub Publisher) (*Actuator, error) {
 		log:       cfg.Logger.With("component", "door-actuator", "door", cfg.DoorID),
 		retries:   cfg.Retries,
 		retryWait: cfg.RetryWait,
-		seen:      newSeenSet(cfg.SeenCapacity),
+		seen:      dedupe.New(cfg.SeenCapacity),
 	}, nil
 }
 
@@ -149,11 +150,10 @@ func (a *Actuator) Handle(ctx context.Context, cmd model.DoorCommand) (model.Doo
 		}
 	}
 
-	if a.seen.has(cmd.CommandID) {
+	if a.seen.SeenOrAdd(cmd.CommandID) {
 		a.log.Info("duplicate command ignored", "command_id", cmd.CommandID, "decision_id", cmd.DecisionID)
 		return a.emit(ctx, a.state(true, nil))
 	}
-	a.seen.add(cmd.CommandID)
 
 	if cmd.TTLSeconds > 0 {
 		a.log.Info("command has a TTL; relock-on-expiry is the decision service's job, not enforced here",

@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"strings"
 )
 
 // maxErrorBody caps how much of a non-2xx response body we read into an
@@ -64,27 +62,14 @@ func (c *Client) Building(ctx context.Context) (Building, error) {
 // getJSON performs GET baseURL+path and decodes a JSON body into dst.
 // Every failure mode is wrapped with the path for context.
 func (c *Client) getJSON(ctx context.Context, path string, dst any) error {
-	endpoint := c.baseURL + path
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	resp, err := c.request(ctx, http.MethodGet, path, nil)
 	if err != nil {
-		return fmt.Errorf("buildsim: build request for %s: %w", path, err)
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", userAgent)
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		// Covers connection refused, DNS failure, TLS errors and
-		// context deadline/cancellation.
-		return fmt.Errorf("buildsim: GET %s: %w", path, err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
-		return fmt.Errorf("buildsim: GET %s: unexpected status %s: %s",
-			path, resp.Status, strings.TrimSpace(string(snippet)))
+		return statusError(resp, http.MethodGet, path)
 	}
 
 	// Lenient decode: tolerate fields BuildSim may add later. The strict

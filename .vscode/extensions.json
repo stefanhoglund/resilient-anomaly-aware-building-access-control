@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "golang.go",
+    "anthropic.claude-code",
+    "ms-azuretools.vscode-containers",
+    "docker.docker"
+  ]
+}

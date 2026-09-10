@@ -1,0 +1,19 @@
+{
+  "editor.formatOnSave": true,
+
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+
+  "go.useLanguageServer": true,
+  "go.testFlags": [
+    "-v"
+  ],
+
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}

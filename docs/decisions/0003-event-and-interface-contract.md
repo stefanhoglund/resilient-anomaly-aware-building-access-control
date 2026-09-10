@@ -35,9 +35,16 @@ repeat (`1552` appears four times). Therefore:
   static mapping table to BuildSim `(level, room-name)`. Services never
   hard-code BuildSim names.
 
-**Task before 0004:** choose two rooms on `level0` with unique names,
-adjacent, sensible as "office" and "restricted lab", and record the
-mapping in `internal/model`.
+**Chosen (verified against the running instance):** `level0` rooms
+`A1006` (id 61) and `A1007` (id 62) — adjacent in the walkable graph,
+both names unique on the level, both accept equipment. Mapping:
+
+| logical id | BuildSim | role |
+|---|---|---|
+| `room-office` | `level0` / `A1006` | permitted office |
+| `room-lab` | `level0` / `A1007` | restricted lab |
+| `door-1` | equipment in `A1007` | the controlled door between them |
+| `reader-1` | sensors on `door-1` | badge reader at `door-1` |
 
 ### Badge-swipe encoding
 

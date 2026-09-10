@@ -59,7 +59,7 @@ Equipment object:
   "type": "", "category": "", "status": "",   // free-form strings, purpose unclear
   "level": "level0",
   "room": "A1105",
-  "version": 9,                                // monotonic, server-owned
+  "version": 18,                               // GLOBAL monotonic mutation counter, server-owned
   "sensors": [
     { "id": "contact", "name": "Contact",
       "data_type": "binary",                   // only "binary" and "text" are valid
@@ -80,10 +80,15 @@ Notes:
 - **`data_type` is only `binary` or `text`.** Numeric readings (CO₂,
   temperature, a swipe count) must be carried as `text` `value` plus a
   `unit`, or reduced to a `binary` flag. 0003 decides the encoding.
-- **`version` increments on every write** (create counts as 1, each PUT
-  +1). This is our freshness / duplicate-suppression primitive — a
-  consumer that has already applied version *N* can ignore a re-delivered
-  version ≤ *N*, and a writer can detect it has lost a race.
+- **`version` is a single global monotonic counter**, bumped once on
+  every mutation of *any* equipment (verified: `v1` create → 16, `v2`
+  create → 17, `v1` PUT → 18, while `v2` stays 17). Each equipment object
+  carries the global version at which it was last written. It is our
+  freshness / duplicate-suppression primitive: a consumer tracks, per
+  equipment id, the highest version it has applied and ignores any
+  re-delivered snapshot with a version ≤ that. The session WebSocket's
+  `{type, version}` notification is a global high-water mark — "some
+  equipment changed at or before this version, re-GET".
 - There is **no sub-resource** for a single sensor or actuator
   (`/api/equipment/{id}/actuators/{aid}` → 404). To change one actuator
   you PUT the whole equipment object back. Concurrent writers to the same
@@ -138,8 +143,9 @@ separate "doors" collection for us.
    service writes each piece. (a) also gives us one place to apply
    timeouts, retries and the `version` de-duplication.
 
-4. **`version` is the staleness signal** for the required "stale
-   observation" fault tests — consumers compare versions, not wall clock.
+4. **The global `version` is the staleness signal** for the required
+   "stale observation" fault tests — consumers compare the per-equipment
+   high-water version, not wall clock.
 
 5. **Alerts and the dashboard are ours**, served from our own state, not
    from `/api/alerts`.
